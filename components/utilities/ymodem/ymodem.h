@@ -1,16 +1,13 @@
+#ifndef __YMODEM_H__
+#define __YMODEM_H__
 /*
- * COPYRIGHT (C) 2012, Real-Thread Information Technology Ltd
- * All rights reserved
- *
- * SPDX-License-Identifier: Apache-2.0
+ * File      : ymodem.h
+ * COPYRIGHT (C) 2012, Shanghai Real-Thread Technology Co., Ltd
  *
  * Change Logs:
  * Date           Author       Notes
  * 2013-04-14     Grissiom     initial implementation
  */
-
-#ifndef __YMODEM_H__
-#define __YMODEM_H__
 
 #include "rtthread.h"
 
@@ -44,6 +41,10 @@ enum rym_code {
 #define RYM_ERR_DSZ  0x74
 /* the transmission is aborted by user */
 #define RYM_ERR_CAN  0x75
+/* respact a ACK or NAK*/
+#define RYM_ERR_ACK  0x76
+/* transmit file invalid*/
+#define TYM_ERR_NO_FILE 0x77
 
 /* how many ticks wait for chars between packet. */
 #ifndef RYM_WAIT_CHR_TICK
@@ -62,6 +63,7 @@ enum rym_code {
 #ifndef RYM_END_SESSION_SEND_CAN_NUM
 #define RYM_END_SESSION_SEND_CAN_NUM  0x07
 #endif
+
 
 enum rym_stage {
     RYM_STAGE_NONE,
@@ -112,6 +114,30 @@ struct rym_ctx
     rt_device_t dev;
 };
 
+struct ym_ctx{
+    enum rym_stage stage;
+    struct rt_semaphore sem;
+    rt_device_t dev;
+};
+
+struct tym_ctx
+{
+    struct ym_ctx parent;
+
+    rt_uint8_t seq;
+
+    /* prepare to transmit */
+    const char** fname_list;
+    /* prepared file number */
+    int fnum;
+
+    /* current transmit file*/
+    const char* fname;
+    int fd;
+    int flen;
+    int ftxremain;
+};
+
 /** recv a file on device dev with ymodem session ctx.
  *
  * If an error happens, you can get where it is failed from ctx->stage.
@@ -140,5 +166,19 @@ struct rym_ctx
 rt_err_t rym_recv_on_device(struct rym_ctx *ctx, rt_device_t dev, rt_uint16_t oflag,
         rym_callback on_begin, rym_callback on_data, rym_callback on_end,
         int handshake_timeout);
+
+
+/**
+ * @brief transmit multi file
+ * @param dev         serial port to be used
+ * @param oflag       serial port open flag
+ * @param fname_list  file's name to be sent
+ * @param file_num    file count to be sent
+ * @return if succeed return RT_EOK
+ * @attention the file name in fname_list must be absolute file path
+ *            if not, the transmistion will be failed
+ */
+rt_err_t tym_recv_on_device( struct tym_ctx *ctx, rt_device_t dev, rt_uint16_t oflag,
+        int handshake_timeout, const char** fname_list, int file_num);
 
 #endif
